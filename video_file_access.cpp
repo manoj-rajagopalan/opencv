@@ -1,6 +1,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <string>
 
 #include <opencv2/videoio.hpp>
 
@@ -13,6 +14,10 @@ void printVideoFileProperties(const cv::VideoCapture& video_file_reader)
     cout << "- Frame rate = " << video_file_reader.get(cv::CAP_PROP_FPS) << " fps" << endl;
     cout << "- Frame dimensions = " << video_file_reader.get(cv::CAP_PROP_FRAME_WIDTH) << 'x'
          << video_file_reader.get(cv::CAP_PROP_FRAME_HEIGHT) << endl;
+    double fourcc_as_double = video_file_reader.get(cv::CAP_PROP_FOURCC);
+    std::string fourcc((char*) &fourcc_as_double, sizeof(double));
+    cout << "- FourCC = " << fourcc << endl;
+    cout << "- FourCC (int) = 0x" << std::hex << int64_t(fourcc_as_double) << endl;
 }
 
 int main(int argc, char *argv[])

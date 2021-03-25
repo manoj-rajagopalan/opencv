@@ -1,5 +1,4 @@
 UNAME=$(shell uname)
-message "UNAME=${UNAME}"
 
 CXXFLAGS= -std=c++11
 

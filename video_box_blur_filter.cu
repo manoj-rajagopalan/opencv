@@ -76,7 +76,7 @@ void cudaCheckSuccess(cudaError_t const cuda_status, std::string const& message)
 
 int main(int const argc, char const *const argv[])
 {
-    assert(argc == 3 && "Usage: video_processor <infile> <outfile>");
+    assert(argc == 3 && "Usage: video_box_blur_filterer <infile> <outfile>");
 
     cv::VideoCapture video_infile;
     bool status = video_infile.open(argv[1]);

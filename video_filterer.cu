@@ -52,7 +52,7 @@ void cudaFilter(uchar3 *const out_image,
         int const window_left = -window_right;
         int const window_bottom = filter_height / 2;
         int const window_top = -window_bottom;
-        for(int i = window_bottom; i <= window_top; ++i) {
+        for(int i = window_top; i <= window_bottom; ++i) {
             int yi = y + i;
             yi = yi < 0 ? 0 : (yi >= image_height ? (image_height-1) : yi);
 
@@ -63,10 +63,10 @@ void cudaFilter(uchar3 *const out_image,
                 int const pixel_index = yi * image_width + xj;
                 uchar3 const pixel = in_image[pixel_index];
 
-                float const filter_coeff = filter[(i - window_bottom) * filter_width + (j - window_left)]
-                sum_x += filter_gpu * pixel.x;
-                sum_y += filter_gpu * pixel.y;
-                sum_z += filter_gpu * pixel.z;
+                float const filter_coeff = filter_gpu[(i - window_top) * filter_width + (j - window_left)];
+                sum_x += filter_coeff * pixel.x;
+                sum_y += filter_coeff * pixel.y;
+                sum_z += filter_coeff * pixel.z;
             }
         }
         uchar3 pixel = make_uchar3(int(sum_x), int(sum_y), int(sum_z));
@@ -93,20 +93,20 @@ public:
     int height() const { return height_; }
     int area() const { return int(data_.size()); }
 
-    float* data() const { return &data_[0]; }
+    float const* data() const { return data_.data(); }
 
     void loadFromFile(std::string const& file_name) {
         std::ifstream file(file_name.c_str());
         assert(file && "Unable to open filter file");
         while(file.good()) {
-            ++height;
+            ++height_;
             std::string line;
             std::getline(file, line);
             std::istringstream line_input(line);
             int line_width = 0;
             float param = 0.0f;
             while(line_input) {
-                param = std::nanf();
+                param = std::nanf("");
                 line_input >> param;
                 if(std::isnan(param)) {
                     break;
@@ -120,11 +120,11 @@ public:
         assert((width_ * height_) == int(data_.size()) && "Error parsing filter");
     }
 
-    void print(std::ostream& o, std::string const& line_begin = '') const {
+    void print(std::ostream& o, std::string const& line_begin = "") const {
         auto data_iter = data_.cbegin();
-        for(i = 0; i < height_; ++i) {
+        for(int i = 0; i < height_; ++i) {
             o << line_begin;
-            for(j = 0; j < width_; ++j) {
+            for(int j = 0; j < width_; ++j) {
                 o << *data_iter << ' ';
                 ++data_iter;
             }
@@ -155,8 +155,8 @@ int main(int const argc, char const *const argv[])
 
     Filter filter_cpu;
     filter_cpu.loadFromFile(argv[3]);
-    std::cout << "Filter dims :" << filter_cpu.width() << 'x' << filter_cpu.height() << std::endl;
-    filter_cpu.print(std::cout, '\t');
+    std::cout << "Filter dims: " << filter_cpu.width() << 'x' << filter_cpu.height() << " = " << filter_cpu.area() << std::endl;
+    filter_cpu.print(std::cout, "\t");
     cudaMemcpyToSymbol(filter_gpu, (const void*) filter_cpu.data(), filter_cpu.area(), /*offset=*/ 0, cudaMemcpyHostToDevice);
 
     // CPU image frames
@@ -188,9 +188,9 @@ int main(int const argc, char const *const argv[])
         cuda_status = cudaMemcpy((void*) gpu_in_frame, (void*) in_frame.data, num_bytes_per_frame, cudaMemcpyHostToDevice);
         assert(cuda_status == cudaSuccess && "Unable to copy frame into GPU");
 
-        cudaBoxBlurFilter<<<(num_pixels + 1023)/1024, 1024>>>(gpu_out_frame, gpu_in_frame, num_pixels,
-                                                              video_properties.frame_size.width, video_properties.frame_size.height,
-                                                              filter_cpu.width(), filter_cpu.height());
+        cudaFilter<<<(num_pixels + 1023)/1024, 1024>>>(gpu_out_frame, gpu_in_frame, num_pixels,
+                                                        video_properties.frame_size.width, video_properties.frame_size.height,
+                                                        filter_cpu.width(), filter_cpu.height());
         cuda_status = cudaGetLastError();
         cudaCheckSuccess(cuda_status, "Error launching kernel");
         

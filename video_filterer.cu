@@ -157,7 +157,12 @@ int main(int const argc, char const *const argv[])
     filter_cpu.loadFromFile(argv[3]);
     std::cout << "Filter dims: " << filter_cpu.width() << 'x' << filter_cpu.height() << " = " << filter_cpu.area() << std::endl;
     filter_cpu.print(std::cout, "\t");
-    cudaMemcpyToSymbol(filter_gpu, (const void*) filter_cpu.data(), filter_cpu.area(), /*offset=*/ 0, cudaMemcpyHostToDevice);
+    cuda_status = cudaMemcpyToSymbol(filter_gpu,
+                                     (const void*) filter_cpu.data(),
+                                     filter_cpu.area() * sizeof(float),
+                                     /*offset=*/ 0,
+                                     cudaMemcpyHostToDevice);
+    cudaCheckSuccess(cuda_status, "Error copying filter into GPU constant memory");
 
     // CPU image frames
     cv::Mat in_frame;

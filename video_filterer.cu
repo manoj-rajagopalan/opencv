@@ -34,8 +34,8 @@ VideoProperties properties(cv::VideoCapture const& video_infile)
 __constant__ float filter_gpu[25];
 
 __global__
-void cudaFilter(uchar3 *const out_image,
-                const uchar3 *const in_image,
+void cudaFilter(uchar3 *const __restrict__ out_image,
+                const uchar3 *const __restrict__ in_image,
                 int const num_pixels,
                 int const image_width,
                 int const image_height,
@@ -150,33 +150,35 @@ int main(int const argc, char const *const argv[])
     // assert(video_properties.cv_mat_type == CV_8UC3);
 
     cv::VideoWriter video_outfile;
-    status = video_outfile.open(argv[2], cv::VideoWriter::fourcc('H','2','6','4'),
+    status = video_outfile.open(argv[2], cv::VideoWriter::fourcc('a','v','c','1'),
                                 video_properties.fps, video_properties.frame_size, video_properties.is_color);
 
     Filter filter_cpu;
     filter_cpu.loadFromFile(argv[3]);
     std::cout << "Filter dims: " << filter_cpu.width() << 'x' << filter_cpu.height() << " = " << filter_cpu.area() << std::endl;
     filter_cpu.print(std::cout, "\t");
-    cuda_status = cudaMemcpyToSymbol(filter_gpu,
-                                     (const void*) filter_cpu.data(),
-                                     filter_cpu.area() * sizeof(float),
-                                     /*offset=*/ 0,
-                                     cudaMemcpyHostToDevice);
+    cudaError_t cuda_status = cudaMemcpyToSymbol(filter_gpu,
+                                                 (const void*) filter_cpu.data(),
+                                                 filter_cpu.area() * sizeof(float),
+                                                 /*offset=*/ 0,
+                                                 cudaMemcpyHostToDevice);
     cudaCheckSuccess(cuda_status, "Error copying filter into GPU constant memory");
 
     // CPU image frames
-    cv::Mat in_frame;
-    status = video_infile.retrieve(in_frame, 0);
+    cv::Mat in_frame(video_properties.frame_size.width, video_properties.frame_size.height, video_properties.cv_mat_type);
+    assert(in_frame.size[0] == video_properties.frame_size.width);
+    assert(in_frame.size[1] == video_properties.frame_size.height);
+    // status = video_infile.retrieve(in_frame, 0);
     cv::Mat out_frame(in_frame.size[0], in_frame.size[1], in_frame.type());
     std::cout << "Frame 0 cv_mat_type = " << in_frame.type() << std::endl;
 
     // GPU image frames
-    uchar3 *gpu_in_frame;
-    uchar3 *gpu_out_frame;
+    uchar3 *gpu_in_frame = 0x0;
+    uchar3 *gpu_out_frame = 0x0;
     int const num_pixels = video_properties.frame_size.width * video_properties.frame_size.height;
-    int const num_bytes_per_frame = num_pixels * 3;
+    int const num_bytes_per_frame = num_pixels * sizeof(uchar3);
     std::cout << "num_pixels = " << num_pixels << std::endl;
-    cudaError_t cuda_status = cudaMalloc((void**) &gpu_in_frame, num_bytes_per_frame);
+    cuda_status = cudaMalloc((void**) &gpu_in_frame, num_bytes_per_frame);
     assert(cuda_status == cudaSuccess && "Unable to allocate input frame on GPU");
     cuda_status = cudaMalloc((void**) &gpu_out_frame, num_bytes_per_frame);
     assert(cuda_status == cudaSuccess && "Unable to allocate output frame on GPU");
@@ -187,6 +189,12 @@ int main(int const argc, char const *const argv[])
 
         status = video_infile.read(in_frame);
         assert(status && "Unable to read input frame from video");
+        if(in_frame.size[1] != video_properties.frame_size.width ||
+           in_frame.size[0] != video_properties.frame_size.height) {
+            std::cout << "- in_frame: " << in_frame.size[1] << 'x' << in_frame.size[0] << '\n';
+            std::cout << "- video: " << video_properties.frame_size.width << 'x' << video_properties.frame_size.height << std::endl;
+            assert(false && "frame size mismatches expectations");
+        }
 
         assert(in_frame.isContinuous());
         
@@ -199,7 +207,7 @@ int main(int const argc, char const *const argv[])
         cuda_status = cudaGetLastError();
         cudaCheckSuccess(cuda_status, "Error launching kernel");
         
-        cuda_status = cudaMemcpy((void*) out_frame.data, (void*) gpu_out_frame, num_bytes_per_frame, cudaMemcpyDeviceToHost);
+        cuda_status = cudaMemcpy((void*) out_frame.data, (const void*) gpu_out_frame, num_bytes_per_frame, cudaMemcpyDeviceToHost);
         cudaCheckSuccess(cuda_status, "Unable to copy frame out of GPU");
         
         video_outfile.write(out_frame);

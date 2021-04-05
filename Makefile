@@ -1,6 +1,6 @@
 UNAME=$(shell uname)
 
-CXXFLAGS= -std=c++11
+CXXFLAGS= -std=c++17 -g
 
 ifeq (${UNAME},Darwin)
 OPENCV_CXXFLAGS=${CXXFLAGS} $(shell pkg-config --cflags opencv4)

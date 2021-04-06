@@ -17,39 +17,20 @@ struct Path
 class MovingObject
 {
   public:
-    static MovingObject MakeCircle(int radius, std::array<uchar,3> const& color, Path const& p) {
-        MovingObject object;
-        object.shape.reset(new Circle(radius, color));
-        object.setPath(p);
-        return object;
-    }
-
-    static MovingObject MakeRect(int w, int h, std::array<uchar,3> const& color, Path const& p) {
-        MovingObject object;
-        object.shape.reset(new Rect(w, h, color));
-        object.setPath(p);
-        return object;
-    }
+    static MovingObject MakeCircle(int radius, std::array<uchar,3> const& color, Path const& p);
+    static MovingObject MakeRect(int w, int h, std::array<uchar,3> const& color, Path const& p);
     
-    void setPath(Path const& p) {
-        path = p;
-        x = p.origin[0];
-        y = p.origin[1];
-    }
+    void setPath(Path const& p);
+    void draw(cv::Mat& frame);
+    void update();
 
-    void draw(cv::Mat& frame) {
-        shape->draw(frame, x, y);
-    }
-
-    void update() {
-        x += path.step[0];
-        y += path.step[1];
-    }
-
-private:
+  private:
     std::unique_ptr<Shape> shape;
     Path path;
     int x, y;
 };
+
+std::vector<MovingObject> generateRandomMovingCircles(int num, int const frame_width, int const frame_height);
+std::vector<MovingObject> generateRandomMovingRects(int num, int const frame_width, int const frame_height);
 
 #endif // MANOJ_OPENCV_MOVING_OBJECT_HPP

@@ -1,45 +1,71 @@
 #ifndef MANOJ_OPENCV_SHAPES_HPP
 #define MANOJ_OPENCV_SHAPES_HPP
 
+#include <array>
+
 #include "opencv2/core.hpp"
 
-struct Shape
+using RgbColor = std::array<uchar,3>;
+class Shape
 {
+  public:
+    explicit Shape(RgbColor const& rgbColor);
     virtual ~Shape() {}
-    virtual void draw(cv::Mat& frame, int const x, int const y) = 0;
+    virtual void draw(cv::Mat& frame, int const x, int const y) const = 0;
+    virtual cv::Rect2i boundingBox(int const x, int const y) const = 0;
+    RgbColor const& color() const;
+
+  private:
+    RgbColor color_;
+
 };
 
 struct Circle : public Shape
 {
-    int radius;
-    std::array<uchar,3> color;
+  public:
 
-    Circle(int r, std::array<uchar,3> c)
-    : Shape(), radius(r), color(c)
+    Circle(int r, RgbColor const& c)
+    : Shape(c), radius_(r)
     {}
 
-    void draw(cv::Mat& frame, int const x0, int const y0) override {
-        cv::Scalar const color_scalar(color[0], color[1], color[2]);
-        cv::circle(frame, cv::Point{x0,y0}, radius, color_scalar, cv::FILLED);
-    }
+    void draw(cv::Mat& frame, int const x0, int const y0) const override;
+    cv::Rect2i boundingBox(int const x, int const y) const override;
+
+  private:
+    int radius_;
 };
 
 struct Rect : public Shape
 {
-    int width;
-    int height;
-    std::array<uchar,3> color;
-
-    Rect(int w, int h, std::array<uchar,3> c)
-    : width(w), height(h), color(c)
+  public:
+    Rect(int w, int h, RgbColor const& c)
+    : Shape(c), width_(w), height_(h)
     {}
 
-    void draw(cv::Mat& mat, int const x0, int const y0) override {
-        cv::Point const top_left = cv::Point{x0,y0} - cv::Point{width/2, height/2};
-        cv::Point const bottom_right = top_left + cv::Point{width, height};
-        cv::Scalar const color_scalar(color[0], color[1], color[2]);
-        cv::rectangle(mat, top_left, bottom_right, color_scalar, cv::FILLED);
-    }
+    void draw(cv::Mat& mat, int const x0, int const y0) const override;
+    cv::Rect2i boundingBox(int const x, int const y) const override;
+
+  private:
+    int width_;
+    int height_;
 };
+
+inline Shape::Shape(RgbColor const& rgb_color)
+: color_(rgb_color)
+{    
+}
+
+inline RgbColor const& Shape::color() const {
+    return this->color_;
+}
+
+inline cv::Rect2i Circle::boundingBox(int const x, int const y) const /*override*/ {
+    return cv::Rect2i(x - this->radius_ -1, y - this->radius_ -1, 2 * this->radius_ + 2, 2 * this->radius_ + 2);
+}
+
+inline cv::Rect2i Rect::boundingBox(int const x, int const y) const /*override*/ {
+    return cv::Rect2i(x - width_/2 -1, y - height_/2 -1, 2 * this->width_ + 2, 2 * this->height_ + 2);
+}
+
 
 #endif // MANOJ_OPENCV_SHAPES_HPP

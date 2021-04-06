@@ -20,55 +20,6 @@
 int constexpr FRAME_WIDTH = 960;
 int constexpr FRAME_HEIGHT = 600;
 
-inline int sqr(int const x) { return x * x; }
-
-std::vector<MovingObject> generateCircles(int num)
-{
-    std::vector<MovingObject> objects;
-    std::mt19937_64 rand_engine;
-    std::uniform_real_distribution<float> rand_gen;
-    for(int n = 0; n < num; ++n) {
-        std::array<uchar,3> rand_color;
-        rand_color[0] = uchar(255 * rand_gen(rand_engine));
-        rand_color[1] = uchar(255 * rand_gen(rand_engine));
-        rand_color[2] = uchar(255 * rand_gen(rand_engine));
-
-        Path rand_path;
-        rand_path.origin[0] = FRAME_WIDTH / 2 + int((FRAME_WIDTH * (rand_gen(rand_engine) - 0.5)));
-        rand_path.origin[1] = FRAME_HEIGHT / 2 + int((FRAME_HEIGHT * (rand_gen(rand_engine) - 0.5)));
-        rand_path.step[0] = int(4 * (rand_gen(rand_engine) - 0.5));
-        rand_path.step[1] = int(4 * (rand_gen(rand_engine) - 0.5));
-
-        int const radius = int(75 * rand_gen(rand_engine));
-        objects.emplace_back(MovingObject::MakeCircle(radius, rand_color, rand_path));
-    }
-    return objects;
-}
-
-std::vector<MovingObject> generateRects(int num)
-{
-    std::vector<MovingObject> objects;
-    std::mt19937_64 rand_engine;
-    std::uniform_real_distribution<float> rand_gen;
-    for(int n = 0; n < num; ++n) {
-        std::array<uchar,3> rand_color;
-        rand_color[0] = uchar(255 * rand_gen(rand_engine));
-        rand_color[1] = uchar(255 * rand_gen(rand_engine));
-        rand_color[2] = uchar(255 * rand_gen(rand_engine));
-
-        Path rand_path;
-        rand_path.origin[0] = FRAME_WIDTH / 2 + int((FRAME_WIDTH * (rand_gen(rand_engine) - 0.5)));
-        rand_path.origin[1] = FRAME_HEIGHT / 2 + int((FRAME_HEIGHT * (rand_gen(rand_engine) - 0.5)));
-        rand_path.step[0] = int(4 * (rand_gen(rand_engine) - 0.5));
-        rand_path.step[1] = int(4 * (rand_gen(rand_engine) - 0.5));
-
-        int const width = int(80 * rand_gen(rand_engine));
-        int const height = int(80 * rand_gen(rand_engine));
-        objects.emplace_back(MovingObject::MakeRect(width, height, rand_color, rand_path));
-    }
-    return objects;
-}
-
 void cudaCheckSuccess(cudaError_t const cuda_status, std::string const& message)
 {
     if(cudaSuccess != cuda_status) {

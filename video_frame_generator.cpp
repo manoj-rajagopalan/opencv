@@ -12,91 +12,9 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
 
-inline
-uint32_t cvColorScalar(std::array<uchar,3> const rgb) // return OpenCV BGR order
-{
-    return uint32_t(rgb[0]) | (uint32_t(rgb[1]) << 8) | (uint32_t(rgb[2]) << 16);
-}
+#include "shapes.hpp"
+#include "moving_object.hpp"
 
-struct Shape
-{
-    virtual ~Shape() {}
-    virtual void draw(cv::Mat& frame, int const x, int const y) = 0;
-};
-
-struct Circle : public Shape
-{
-    int radius;
-    std::array<uchar,3> color;
-
-    Circle(int r, std::array<uchar,3> c)
-    : Shape(), radius(r), color(c)
-    {}
-
-    void draw(cv::Mat& frame, int const x0, int const y0) override {
-        cv::Scalar const color_scalar(color[0], color[1], color[2]);
-        cv::circle(frame, cv::Point{x0,y0}, radius, color_scalar, cv::FILLED);
-    }
-};
-
-struct Rect : public Shape
-{
-    int width;
-    int height;
-    std::array<uchar,3> color;
-
-    Rect(int w, int h, std::array<uchar,3> c)
-    : width(w), height(h), color(c)
-    {}
-
-    void draw(cv::Mat& mat, int const x0, int const y0) override {
-        cv::Point const top_left = cv::Point{x0,y0} - cv::Point{width/2, height/2};
-        cv::Point const bottom_right = top_left + cv::Point{width, height};
-        uint32_t const color_scalar = cvColorScalar(color);
-        cv::rectangle(mat, top_left, bottom_right, color_scalar, cv::FILLED);
-    }
-};
-
-struct Path
-{
-    int origin[2];
-    int step[2];
-};
-
-class MovingObject
-{
-  public:
-    static MovingObject MakeCircle(int radius, std::array<uchar,3> const& color, Path const& p) {
-        MovingObject object;
-        object.shape.reset(new Circle(radius, color));
-        object.setPath(p);
-        return object;
-    }
-
-    static MovingObject MakeRect(int w, int h, std::array<uchar,3> const& color, Path const& p) {
-        MovingObject object;
-        object.shape.reset(new Rect(w, h, color));
-        object.setPath(p);
-        return object;
-    }
-    
-    void setPath(Path const& p) {
-        path = p;
-        x = p.origin[0];
-        y = p.origin[1];
-    }
-
-    void update(cv::Mat& frame) {
-        shape->draw(frame, x, y);
-        x += path.step[0];
-        y += path.step[1];
-    }
-
-private:
-    std::unique_ptr<Shape> shape;
-    Path path;
-    int x, y;
-};
 
 int constexpr FRAME_WIDTH = 960;
 int constexpr FRAME_HEIGHT = 600;
@@ -149,7 +67,8 @@ void generateFrames(std::vector<MovingObject>& objects, std::string const& prefi
         std::cout << "Drawing frame " << i_frame << '\n';
         frame = 0; // clear
         for(auto &obj : objects) {
-            obj.update(frame);
+            obj.draw(frame);
+            obj.update();
         }
         // video_writer.write(frame);
         // cv::imshow("frame", frame);

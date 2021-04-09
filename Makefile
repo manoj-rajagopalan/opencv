@@ -42,7 +42,7 @@ libmoving_object.a: moving_object.o shapes.o
 video_frame_generator: video_frame_generator.o libmoving_object.a
 	${CXX} -o $@ $^ ${OPENCV_LIBS} ${CUDA_LIBS}
 
-video_frame_generator_cuda: video_frame_generator_cuda.o libmoving_object.a
+video_frame_generator_cuda: video_frame_generator_cuda.o draw_shapes.o libmoving_object.a
 	${CXX} -o $@ $^ ${OPENCV_LIBS} ${CUDA_LIBS}
 
 % : %.o

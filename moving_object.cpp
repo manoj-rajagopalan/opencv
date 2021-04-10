@@ -7,7 +7,7 @@ static inline int sqr(int const x) { return x * x; }
 // static
 MovingObject MovingObject::MakeCircle(int radius, std::array<uchar,3> const& color, Path const& p) {
     MovingObject object;
-    object.shape.reset(new Circle(radius, color));
+    object.shape_.reset(new Circle(radius, color));
     object.setPath(p);
     return object;
 }
@@ -15,7 +15,7 @@ MovingObject MovingObject::MakeCircle(int radius, std::array<uchar,3> const& col
 // static
 MovingObject MovingObject::MakeRect(int w, int h, std::array<uchar,3> const& color, Path const& p) {
     MovingObject object;
-    object.shape.reset(new Rect(w, h, color));
+    object.shape_.reset(new Rect(w, h, color));
     object.setPath(p);
     return object;
 }
@@ -27,7 +27,7 @@ void MovingObject::setPath(Path const& p) {
 }
 
 void MovingObject::draw(cv::Mat& frame) {
-    shape->draw(frame, x, y);
+    shape_->draw(frame, x, y);
 }
 
 void MovingObject::update() {

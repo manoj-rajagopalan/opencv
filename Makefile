@@ -45,5 +45,8 @@ video_frame_generator: video_frame_generator.o libmoving_object.a
 video_frame_generator_cuda: video_frame_generator_cuda.o draw_shapes.o libmoving_object.a
 	${CXX} -o $@ $^ ${OPENCV_LIBS} ${CUDA_LIBS}
 
+cuda_histogram_test: cuda_histogram_test.o cuda_histogram.o
+	${CXX} -o $@ $^ ${OPENCV_LIBS} ${CUDA_LIBS}
+
 % : %.o
 	${CXX} -o $@ $< ${OPENCV_LIBS} ${CUDA_LIBS}

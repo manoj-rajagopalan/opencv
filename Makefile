@@ -10,12 +10,15 @@ CUDA_CXXFLAGS:=
 CUDA_LIBS:=
 else
 CXX:=nvcc
-OPENCV_CXXFLAGS:= $(shell pkg-config --cflags opencv)
-OPENCV_LIBS:= $(shell pkg-config --libs opencv)
+# OPENCV_CXXFLAGS:= $(shell pkg-config --cflags opencv)
+# OPENCV_LIBS:= $(shell pkg-config --libs opencv)
+OPENCV_CXXFLAGS:=-I /usr/include/opencv4
+OPENCV_LIBS:= -L /usr/lib/x86_64-linux-gnu -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -l opencv_videoio
 CUDA_CXXFLAGS:=-I /usr/local/cuda/include
 CUDA_LIBS:=-L /usr/local/cuda/lib64 -lcudart
 endif
 
+# CXXFLAGS:=${CXXFLAGS} ${OPENCV_CXXFLAGS} ${CUDA_CXXFLAGS}
 
 SRC:=$(wildcard *.cpp)
 EXE:=$(patsubst %.cpp, %, ${SRC})
@@ -44,6 +47,9 @@ video_frame_generator: video_frame_generator.o libmoving_object.a
 
 video_frame_generator_cuda: video_frame_generator_cuda.o draw_shapes.o libmoving_object.a
 	${CXX} -o $@ $^ ${OPENCV_LIBS} ${CUDA_LIBS}
+
+video_copy_frame_by_frame: video_copy_frame_by_frame.o
+	g++ -o $@ $< ${OPENCV_LIBS}
 
 % : %.o
 	${CXX} -o $@ $< ${OPENCV_LIBS} ${CUDA_LIBS}

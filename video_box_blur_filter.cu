@@ -82,6 +82,8 @@ int main(int const argc, char const *const argv[])
     bool status = video_infile.open(argv[1]);
     assert(status && "Unable to open input file");
     VideoProperties const video_properties = properties(video_infile);
+    std::cout << "Image dims: " << video_properties.frame_size.width << " x " << video_properties.frame_size.height;
+    std::cout << " [" << video_properties.num_frames << "]" << std::endl;
     std::cout << "Input mat type = " << video_properties.cv_mat_type << std::endl;
     // assert(video_properties.cv_mat_type == CV_8UC3);
 
@@ -91,7 +93,7 @@ int main(int const argc, char const *const argv[])
 
     // CPU image frames
     cv::Mat in_frame;
-    status = video_infile.retrieve(in_frame, 0);
+    video_infile >> in_frame;
     cv::Mat out_frame(in_frame.size[0], in_frame.size[1], in_frame.type());
     std::cout << "Frame 0 cv_mat_type = " << in_frame.type() << std::endl;
 
@@ -107,8 +109,8 @@ int main(int const argc, char const *const argv[])
     assert(cuda_status == cudaSuccess && "Unable to allocate output frame on GPU");
 
     // Process frames
-    for(int i_frame = 0; i_frame < video_properties.num_frames; ++i_frame) {
-        std::cout << "Frame " << i_frame << std::endl;
+    for(int i_frame = 1; i_frame < video_properties.num_frames; ++i_frame) {
+	std::chrono::time_point<std::chrono::steady_clock> t_begin = std::chrono::steady_clock::now();
 
         status = video_infile.read(in_frame);
         assert(status && "Unable to read input frame from video");
@@ -118,13 +120,20 @@ int main(int const argc, char const *const argv[])
         cuda_status = cudaMemcpy((void*) gpu_in_frame, (void*) in_frame.data, num_bytes_per_frame, cudaMemcpyHostToDevice);
         assert(cuda_status == cudaSuccess && "Unable to copy frame into GPU");
 
+	cuda_status = cudaGetLastError();
+	cudaCheckSuccess(cuda_status, "Error before kernel launch");
         cudaBoxBlurFilter<<<(num_pixels + 1023)/1024, 1024>>>(gpu_out_frame, gpu_in_frame, num_pixels,
                                                               video_properties.frame_size.width, video_properties.frame_size.height,
-                                                              3, 3);
+                                                              7, 7);
         
+	cuda_status = cudaGetLastError();
+	cudaCheckSuccess(cuda_status, "Unable to launch kernel");
+	cudaDeviceSynchronize();
         cuda_status = cudaMemcpy((void*) out_frame.data, (void*) gpu_out_frame, num_bytes_per_frame, cudaMemcpyDeviceToHost);
         cudaCheckSuccess(cuda_status, "Unable to copy frame out of GPU");
         
+	std::chrono::duration<float> const duration = std::chrono::nanoseconds(std::chrono::steady_clock::now() - t_begin);
+        std::cout << "Frame " << i_frame  << "  " << duration.count() << " ns" << std::endl;
         video_outfile.write(out_frame);
     }
 

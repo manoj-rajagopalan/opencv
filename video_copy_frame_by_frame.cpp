@@ -11,7 +11,7 @@
 
 int main(int const argc, char const *const argv[])
 {
-    assert(argc == 3 && "Usage: video_filterer <infile> <outfile>");
+    assert(argc == 3 && "Usage: video_copy_frame_by_frame <infile> <outfile>");
 
     cv::VideoCapture video_infile;
     bool status = video_infile.open(argv[1]);
